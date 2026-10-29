@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💊 Farmacia - Sistema POS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background: #f0f7ff; color: #1e293b; min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; width: 100%; }
+        header { background: #0277bd; color: white; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 20px; }
+        .header-usuario { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .btn-salir { background: #c62828; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .btn-salir:hover { background: #a01a1a; }
+        nav { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        nav button { background: #0288d1; font-size: 14px; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+        nav button.activo { background: #01579b; border: 2px solid #81d4fa; }
+        .seccion { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h2 { color: #0277bd; margin-bottom: 15px; border-bottom: 2px solid #b3e5fc; padding-bottom: 8px; }
+        button:hover { background: #0277bd; }
+        button.rojo { background: #e53935; }
+        button.rojo:hover { background: #c62828; }
+        button.verde { background: #2e7d32; }
+        button.verde:hover { background: #1b5e20; }
+        button.naranja { background: #fb8c00; }
+        button.naranja:hover { background: #ef6c00; }
+        input, select, textarea { padding: 10px; border: 1px solid #81d4fa; border-radius: 5px; margin: 5px; width: 100%; max-width: 380px; font-size: 15px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .producto { background: #e1f5fe; padding: 12px; border-radius: 8px; border-left: 4px solid #0288d1; }
+        .producto.etico { border-left-color: #d81b60; background: #fce4ec; }
+        .producto.generico { border-left-color: #2e7d32; background: #e8f5e9; }
+        .producto.vitaminas { border-left-color: #f9a825; background: #fff8e1; }
+        .producto.cuidado { border-left-color: #7b1fa2; background: #f3e5f5; }
+        .producto.bebes { border-left-color: #00897b; background: #e0f2f1; }
+        .producto.caducado { border: 2px solid #c62828; background: #ffebee; }
+        .carrito-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #ccc; flex-wrap: wrap; gap: 8px; }
+        .total { font-size: 22px; font-weight: bold; text-align: right; margin-top: 15px; color: #0277bd; }
+        .ticket { background: #fff; border: 1px dashed #888; padding: 20px; margin-top: 20px; font-family: monospace; font-size: 13px; display: none; }
+        .fila-ticket { display: flex; justify-content: space-between; padding: 2px 0; }
+        .oculto { display: none !important; }
+        .mensaje { padding: 10px; border-radius: 5px; margin: 10px 0; display: none; max-width: 380px; }
+        .exito { background: #d4edda; color: #155724; display: block; }
+        .error { background: #f8d7da; color: #721c24; display: block; }
+        .aviso { background: #fff3cd; color: #856404; display: block; }
+        .tabla { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        .tabla th, .tabla td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        .tabla th { background: #b3e5fc; color: #01579b; }
+        .resumen-caja { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .caja-card { background: #e1f5fe; padding: 15px; border-radius: 8px; text-align: center; }
+        .caja-card h3 { font-size: 14px; color: #0277bd; margin-bottom: 5px; }
+        .caja-card .valor { font-size: 24px; font-weight: bold; }
+        .fecha-filtro { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal.activo { display: flex; }
+        .modal-contenido { background: white; padding: 25px; border-radius: 10px; max-width: 550px; width: 95%; position: relative; max-height: 90vh; overflow-y: auto; }
+        .cerrar-modal { position: absolute; right: 15px; top: 10px; font-size: 24px; cursor: pointer; color: #888; }
+        .cerrar-modal:hover { color: #000; }
+        .btn-agregar { background: #b3e5fc; color: #01579b; padding: 5px 10px; font-size: 13px; border: none; border-radius: 3px; cursor: pointer; }
+        .btn-quitar { background: #e53935; padding: 2px 8px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; color: white; }
+        .agotado { color: #c62828; font-weight: bold; }
+        .proximocaducar { color: #f57c00; font-weight: bold; }
+        .receta { border-left: 3px solid #d81b60; padding-left: 8px; }
+        
+        .login-pantalla { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+        .login-caja { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); width: 100%; max-width: 420px; }
+        .login-caja h2 { text-align: center; border: none; }
+        .login-caja button { width: 100%; margin-top: 10px; }
+        .enlace { background: none; border: none; color: #0277bd; cursor: pointer; text-decoration: underline; padding: 0; margin-top: 15px; }
+        .enlace:hover { color: #01579b; background: none; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            .ticket, .ticket * { visibility: visible; }
+            .ticket { position: absolute; left: 0; top: 0; width: 80%; max-width: 320px; margin: 0 auto; border: none; }
+            .ticket button { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="pantalla-login" class="login-pantalla">
+    <div class="login-caja">
+        <h2>💊 Farmacia - Sistema POS</h2>
+        <p style="text-align:center; color:#666; margin-bottom:20px;">Control de Ventas e Inventario</p>
+        
+        <div id="form-login">
+            <div>
+                <label><strong>Usuario:</strong></label><br>
+                <input type="text" id="usuario" placeholder="Tu usuario">
+            </div>
+            <div>
+                <label><strong>Contraseña:</strong></label><br>
+                <input type="password" id="clave" placeholder="Tu contraseña">
+            </div>
+            <div id="msg-login" class="mensaje"></div>
+            <br>
+            <button onclick="iniciarSesion()" class="verde">✅ Entrar</button>
+            <p style="text-align:center;">¿No tienes cuenta? <button class="enlace" onclick="mostrarRegistro()">Regístrate aquí</button></p>
+        </div>
+        
+        <div id="form-registro" class="oculto">
+            <h3 style="text-align:center; margin-bottom:15px;">📝 Nuevo Usuario</h3>
+            <div>
+                <label><strong>Nombre Completo:</strong></label><br>
+                <input type="text" id="reg-nombre" placeholder="Nombre completo">
+            </div>
+            <div>
+                <label><strong>Usuario:</strong></label><br>
+                <input type="text" id="reg-usuario" placeholder="Nombre de usuario">
+            </div>
+            <div>
+                <label><strong>Contraseña:</strong></label><br>
+                <input type="password" id="reg-clave" placeholder="Contraseña">
+            </div>
+            <div id="msg-registro" class="mensaje"></div>
+            <br>
+            <button onclick="registrarUsuario()" class="verde">✅ Crear Cuenta</button>
+            <p style="text-align:center;">¿Ya tienes cuenta? <button class="enlace" onclick="mostrarLogin()">Inicia sesión</button></p>
+        </div>
+    </div>
+</div>
+
+<div id="sistema" class="oculto">
+    <header class="header-usuario">
+        <div>
+            <h1>💊 FARMACIA — PUNTO DE VENTA</h1>
+            <p>Bienvenido, <span id="nombre-usuario"></span> 👋</p>
+        </div>
+        <button class="btn-salir" onclick="cerrarSesion()">🚪 Cerrar Sesión</button>
+    </header>
+
+    <div class="container">
+        <nav>
+            <button id="btn-ventas" class="activo" onclick="mostrarSeccion('ventas')">🛒 Ventas</button>
+            <button id="btn-historial" onclick="mostrarSeccion('historial')">📊 Historial</button>
+            <button id="btn-caja" onclick="mostrarSeccion('caja')">💰 Cierre de Caja</button>
+            <button id="btn-inventario" onclick="mostrarSeccion('inventario')">📦 Inventario</button>
+            <button id="btn-nuevo-producto" onclick="mostrarSeccion('nuevo-producto')">➕ Nuevo Medicamento</button>
+            <button id="btn-alertas" onclick="mostrarSeccion('alertas')">⚠️ Alertas</button>
+        </nav>
+
+        <!-- VENTAS -->
+        <div id="sec-ventas" class="seccion">
+            <h2>📋 Medicamentos y Productos</h2>
+            <div style="margin-bottom:15px;">
+                <input type="text" id="buscar-producto" placeholder="🔍 Buscar por nombre, código, sustancia o lote..." oninput="filtrarProductos()">
+            </div>
+            <div id="sin-productos" style="color:#888; padding:20px; text-align:center;">
+                No hay productos registrados.<br>Ve a "Nuevo Medicamento" para agregar los tuyos.
+            </div>
+            <div class="grid" id="lista-productos"></div>
+
+            <h2 style="margin-top:30px;">🛒 Carrito de Venta</h2>
+            <div id="carrito-vacio" style="color:#888; padding:15px; text-align:center;">El carrito está vacío. Agrega productos para empezar.</div>
+            <div id="items-carrito"></div>
+            <div class="total">Total: $<span id="total">0.00</span></div>
+            <br>
+            <button onclick="limpiarCarrito()" class="rojo">🗑️ Cancelar Venta</button>
+            <button onclick="abrirModalPago()">💳 Cobrar</button>
+
+            <div class="ticket" id="ticket">
+                <h3 style="text-align:center;">💊 FARMACIA</h3>
+                <p style="text-align:center;">Dirección<br>Teléfono</p>
+                <hr style="border:1px dashed #999; margin:10px 0;">
+                <p>Ticket Nº: <span id="t-num"></span></p>
+                <p>Fecha: <span id="t-fecha"></span></p>
+                <p>Farmacéutico: <span id="t-cajero"></span></p>
+                <hr style="border:1px dashed #999; margin:10px 0;">
+                <div id="t-items"></div>
+                <hr style="border:1px dashed #999; margin:10px 0;">
+                <p class="fila-ticket"><strong>TOTAL: $<span id="t-total"></span></strong></p>
+                <p class="fila-ticket">Pago: $<span id="t-pago"></span></p>
+                <p class="fila-ticket">Cambio: $<span id="t-cambio"></span></p>
+                <hr style="border:1px dashed #999; margin:10px 0;">
+                <p style="text-align:center;">* Venta sujeta a receta médica cuando corresponda *<br>¡Gracias por su preferencia!</p>
+                <br>
+                <button onclick="window.print()">🖨️ Imprimir Ticket</button>
+            </div>
+        </div>
+
+        <!-- MODAL CANTIDAD -->
+        <div id="modal-cantidad" class="modal">
+            <div class="modal-contenido">
+                <span class="cerrar-modal" onclick="cerrarModalCantidad()">&times;</span>
+                <h3 id="prod-nombre"></h3>
+                <p style="font-size:13px; color:#666;" id="prod-sustancia"></p>
+                <p style="font-size:13px;" id="prod-lote"></p>
+                <p style="font-size:13px;" id="prod-caducidad"></p>
+                <p>Precio: $<span id="prod-precio"></span></p>
+                <p>Disponible: <span id="prod-stock"></span> cajas/unidades</p>
+                <div id="aviso-receta" class="mensaje aviso oculto">⚠️ Este producto requiere receta médica</div>
+                <div id="aviso-caducidad" class="mensaje error oculto">⚠️ Producto próximo a caducar</div>
+                <div>
+                    <label><strong>Cantidad:</strong></label><br>
+                    <input type="number" min="1" id="cantidad-ingresada" placeholder="1" oninput="calcularSubtotal()">
+                </div>
+                <p style="font-size:18px; margin-top:10px;">Subtotal: <strong>$<span id="subtotal-calculado">0.00</span></strong></p>
+                <br>
+                <button onclick="confirmarAgregar()" class="verde">✅ Agregar</button>
+                <button onclick="cerrarModalCantidad()">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- MODAL PAGO -->
+        <div id="modal-pago" class="modal">
+            <div class="modal-contenido">
+                <span class="cerrar-modal" onclick="cerrarModalPago()">&times;</span>
+                <h2>💰 Pago</h2>
+                <p style="font-size:18px; margin:15px 0;">Total: <strong>$<span id="modal-total"></span></strong></p>
+                <div>
+                    <label><strong>Recibido del cliente:</strong></label><br>
+                    <input type="number" step="0.01" id="pago-recibido" placeholder="0.00" oninput="calcularCambio()">
+                </div>
+                <p style="font-size:16px; margin-top:15px;">Cambio: <strong>$<span id="pago-cambio">0.00</span></strong></p>
+                <br>
+                <button onclick="confirmarVenta()" class="verde">✅ Confirmar Venta</button>
+                <button onclick="cerrarModalPago()">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div id="sec-historial" class="seccion oculto">
+            <h2>📊 Historial de Ventas</h2>
+            <div class="fecha-filtro">
+                <label>Desde:</label>
+                <input type="date" id="fecha-desde">
+                <label>Hasta:</label>
+                <input type="date" id="fecha-hasta">
+                <button onclick="filtrarHistorial()">🔍 Filtrar</button>
+                <button onclick="verTodoHistorial()">📋 Ver Todo</button>
+            </div>
+            <div id="historial-vacio" style="text-align:center; padding:30px; color:#888;">No hay ventas registradas</div>
+            <table class="tabla" id="tabla-historial" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Ticket</th>
+                        <th>Fecha</th>
+                        <th>Farmacéutico</th>
+                        <th>Total</th>
+                                               <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpo-historial"></tbody>
+            </table>
+        </div>
+
+        <!-- CAJA -->
+        <div id="sec-caja" class="seccion oculto">
+            <h2>💰 Cierre de Caja</h2>
+            <div class="resumen-caja">
+                <div class="caja-card">
+                    <h3>Ventas del Día</h3>
+                    <div class="valor" id="caja-ventas">0</div>
+                </div>
+                <div class="caja-card">
+                    <h3>Total en Caja</h3>
+                    <div class="valor" id="caja-total">$0.00</div>
+                </div>
+                <div class="caja-card">
+                    <h3>Fecha</h3>
+                    <div class="valor" id="caja-fecha" style="font-size:16px;"></div>
+                </div>
+            </div>
+            <br>
+            <button onclick="cerrarCaja()" class="rojo">🔄 Cerrar Caja</button>
+            <button onclick="exportarReporte()">📄 Exportar Reporte</button>
+        </div>
+
+        <!-- INVENTARIO -->
+        <div id="sec-inventario" class="seccion oculto">
+            <h2>📦 Inventario de Medicamentos</h2>
+            <div style="margin-bottom:15px;">
+                <input type="text" id="buscar-inv" placeholder="🔍 Buscar por nombre, lote o sustancia..." oninput="filtrarInventario()">
+            </div>
+            <table class="tabla">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Sustancia / Lote</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Caducidad</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inv-cuerpo"></tbody>
+            </table>
+        </div>
+
+        <!-- NUEVO PRODUCTO -->
+        <div id="sec-nuevo-producto" class="seccion oculto">
+            <h2>➕ Agregar Nuevo Medicamento</h2>
+            <div>
+                <label><strong>Nombre Comercial:</strong></label><br>
+                <input type="text" id="prod-nom" placeholder="Ej: Paracetamol 500mg">
+            </div>
+            <div>
+                <label><strong>Principio Activo / Sustancia:</strong></label><br>
+                <input type="text" id="prod-sustancia" placeholder="Ej: Paracetamol">
+            </div>
+            <div>
+                <label><strong>Lote:</strong></label><br>
+                <input type="text" id="prod-lote" placeholder="Ej: L-2458-MX">
+            </div>
+            <div>
+                <label><strong>Fecha de Caducidad:</strong></label><br>
+                <input type="date" id="prod-caducidad">
+            </div>
+            <div>
+                <label><strong>Categoría:</strong></label><br>
+                <select id="prod-cat">
+                    <option value="">Selecciona</option>
+                    <option value="etico">💊 Ético / Receta</option>
+                    <option value="generico">💚 Genérico</option>
+                    <option value="vitaminas">🍊 Vitaminas y Suplementos</option>
+                    <option value="cuidado">🧴 Cuidado Personal</option>
+                    <option value="bebes">🍼 Productos para Bebés</option>
+                </select>
+            </div>
+            <div>
+                <label><strong>Precio de Venta:</strong></label><br>
+                <input type="number" step="0.01" id="prod-prec" placeholder="0.00">
+            </div>
+            <div>
+                <label><strong>Cantidad (Stock):</strong></label><br>
+                <input type="number" id="prod-stk" placeholder="0">
+            </div>
+            <div>
+                <label><strong>Requiere Receta Médica:</strong></label><br>
+                <select id="prod-receta">
+                    <option value="no">No</option>
+                    <option value="si">Sí</option>
+                </select>
+            </div>
+            <div id="msg-prod" class="mensaje"></div>
+            <br>
+            <button onclick="guardarProducto()" class="verde">💾 Guardar Medicamento</button>
+            <button onclick="limpiarFormulario()">🗑️ Limpiar</button>
+        </div>
+
+        <!-- ALERTAS -->
+        <div id="sec-alertas" class="seccion oculto">
+            <h2>⚠️ Alertas de Inventario</h2>
+            <h3 style="color:#f57c00; margin:15px 0 5px;">🔄 Próximos a Caducar (menos de 90 días)</h3>
+            <div id="alert-caducar" style="color:#888; padding:10px 0;">Sin alertas</div>
+            
+            <h3 style="color:#c62828; margin:25px 0 5px;">📉 Stock Bajo (menos de 5 unidades)</h3>
+            <div id="alert-stock" style="color:#888; padding:10px 0;">Sin alertas</div>
+            
+            <h3 style="color:#d81b60; margin:25px 0 5px;">📋 Productos con Receta</h3>
+            <div id="alert-receta" style="color:#888; padding:10px 0;">Sin productos</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let productos = JSON.parse(localStorage.getItem('productosFarmacia')) || [];
+let carrito = [];
+let ventas = JSON.parse(localStorage.getItem('ventasFarmacia')) || [];
+let usuarios = JSON.parse(localStorage.getItem('usuariosFarmacia')) || [];
+let usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivoFarmacia')) || null;
+let prodActual = null;
+
+// === AUTENTICACIÓN ===
+function mostrarRegistro() {
+    document.getElementById('form-login').classList.add('oculto');
+    document.getElementById('form-registro').classList.remove('oculto');
+    limpiarMensajes();
+}
+
+function mostrarLogin() {
+    document.getElementById('form-registro').classList.add('oculto');
+    document.getElementById('form-login').classList.remove('oculto');
+    limpiarMensajes();
+}
+
+function limpiarMensajes() {
+    ['msg-login','msg-registro','msg-prod'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) { el.className = 'mensaje'; el.textContent = ''; }
+    });
+}
+
+function registrarUsuario() {
+    const nombre = document.getElementById('reg-nombre').value.trim();
+    const usr = document.getElementById('reg-usuario').value.trim();
+    const clave = document.getElementById('reg-clave').value;
+    const msg = document.getElementById('msg-registro');
+
+    if (!nombre || !usr || !clave) {
+        msg.textContent = '⚠️ Completa todos los campos';
+        msg.className = 'mensaje error';
+        return;
+    }
+    if (usuarios.find(u => u.usuario === usr)) {
+        msg.textContent = '❌ El usuario ya existe';
+        msg.className = 'mensaje error';
+        return;
+    }
+
+    usuarios.push({ nombre, usuario: usr, clave });
+    localStorage.setItem('usuariosFarmacia', JSON.stringify(usuarios));
+    msg.textContent = '✅ Cuenta creada. Inicia sesión.';
+    msg.className = 'mensaje exito';
+    setTimeout(mostrarLogin, 1500);
+}
+
+function iniciarSesion() {
+    const usr = document.getElementById('usuario').value.trim();
+    const clave = document.getElementById('clave').value;
+    const encontrado = usuarios.find(u => u.usuario === usr && u.clave === clave);
+    
+    if (encontrado) {
+        usuarioActivo = encontrado;
+        localStorage.setItem('usuarioActivoFarmacia', JSON.stringify(usuarioActivo));
+        document.getElementById('pantalla-login').classList.add('oculto');
+        document.getElementById('sistema').classList.remove('oculto');
+        document.getElementById('nombre-usuario').textContent = encontrado.nombre;
+        cargarProductos();
+        actualizarCaja();
+    } else {
+        const msg = document.getElementById('msg-login');
+        msg.textContent = '❌ Datos incorrectos';
+        msg.className = 'mensaje error';
+    }
+}
+
+function cerrarSesion() {
+    localStorage.removeItem('usuarioActivoFarmacia');
+    usuarioActivo = null; carrito = [];
+    document.getElementById('sistema').classList.add('oculto');
+    document.getElementById('pantalla-login').classList.remove('oculto');
+}
+
+// === NAVEGACIÓN ===
+function mostrarSeccion(nombre) {
+    document.querySelectorAll('.seccion').forEach(s => s.classList.add('oculto'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('activo'));
+    document.getElementById(`sec-${nombre}`).classList.remove('oculto');
+    document.getElementById(`btn-${nombre}`).classList.add('activo');
+    
+    if (nombre === 'inventario') cargarInventario();
+    if (nombre === 'historial') cargarHistorial();
+    if (nombre === 'alertas') cargarAlertas();
+}
+
+// === PRODUCTOS ===
+function guardarProducto() {
+    const datos = {
+        id: Date.now(),
+        nombre: document.getElementById('prod-nom').value.trim(),
+        sustancia: document.getElementById('prod-sustancia').value.trim(),
+        lote: document.getElementById('prod-lote').value.trim(),
+        caducidad: document.getElementById('prod-caducidad').value,
+        categoria: document.getElementById('prod-cat').value,
+        precio: parseFloat(document.getElementById('prod-prec').value),
+        stock: parseInt(document.getElementById('prod-stk').value),
+        receta: document.getElementById('prod-receta').value
+    };
+    const msg = document.getElementById('msg-prod');
+
+    if (!datos.nombre || !datos.categoria || isNaN(datos.precio) || isNaN(datos.stock)) {
+        msg.textContent = '⚠️ Completa los campos obligatorios';
+        msg.className = 'mensaje error';
+        return;
+    }
+
+    productos.push(datos);
+    localStorage.setItem('productosFarmacia', JSON.stringify(productos));
+    msg.textContent = '✅ Medicamento guardado';
+    msg.className = 'mensaje exito';
+    limpiarFormulario();
+    setTimeout(() => msg.className = 'mensaje', 2500);
+}
+
+function limpiarFormulario() {
+    ['prod-nom','prod-sustancia','prod-lote','prod-caducidad','prod-prec','prod-stk'].forEach(id => {
+        const el = document.getElementById(id); if(el) el.value = '';
+    });
+    document.getElementById('prod-cat').value = '';
+    document.getElementById('prod-receta').value = 'no';
+    limpiarMensajes();
+}
+
+function estaProximoACaducar(fechaCad) {
+    if (!fechaCad) return false;
+    const hoy = new Date();
+    const cad = new Date(fechaCad);
+    const dias = (cad - hoy) / (1000 * 60 * 60 * 24);
+    return dias > 0 && dias <= 90;
+}
+
+function estaCaducado(fechaCad) {
+    if (!fechaCad) return false;
+    return new Date(fechaCad) < new Date();
+}
+
+function cargarProductos(lista = productos) {
+    const cont = document.getElementById('lista-productos');
+    const vacio = document.getElementById('sin-productos');
+    
+    if (lista.length === 0) { cont.innerHTML = ''; vacio.style.display = 'block'; return; }
+    vacio.style.display = 'none';
+    
+    cont.innerHTML = lista.map(p => {
+        const cad = estaCaducado(p.caducidad);
+        const prox = estaProximoACaducar(p.caducidad);
+        return `
+        <div class="producto ${p.categoria} ${cad ? 'caducado' : ''}">
+            <h4>${p.nombre}</h4>
+            <p style="font-size:12px; color:#555;">${p.sustancia || 'Sin sustancia'} — ${p.lote || 'Sin lote'}</p>
+            <p><strong>$${p.precio.toFixed(2)}</strong></p>
+            <p class="${p.stock <= 5 ? 'agotado' : ''}">Stock: ${p.stock}</p>
+            ${cad ? '<p class="agotado">❌ CADUCADO</p>' : prox ? '<p class="proximocaducar">⚠️ Próximo a caducar</p>' : ''}
+            ${p.receta === 'si' ? '<p class="receta">📋 Requiere receta</p>' : ''}
+            <button class="btn-agregar" onclick="abrirModalCantidad(${p.id})" ${cad ? 'disabled style=opacity:0.5' : ''}>➕ Agregar</button>
+        </div>`;
+    }).join('');
+}
+
+function filtrarProductos() {
+    const b = document.getElementById('buscar-producto').value.toLowerCase();
+    cargarProductos(productos.filter(p => 
+        p.nombre.toLowerCase().includes(b) || 
+        (p.sustancia && p.sustancia.toLowerCase().includes(b)) ||
+        (p.lote && p.lote.toLowerCase().includes(b))
+    ));
+}
+
+// === MODAL CANTIDAD ===
+function abrirModalCantidad(id) {
+    prodActual = productos.find(p => p.id === id);
+    if (!prodActual || estaCaducado(prodActual.caducidad)) return;
+
+    document.getElementById('prod-nombre').textContent = prodActual.nombre;
+    document.getElementById('prod-sustancia').textContent = prodActual.sustancia || '';
+    document.getElementById('prod-lote').textContent = prodActual.lote ? `Lote: ${prodActual.lote}` : '';
+    document.getElementById('prod-caducidad').textContent = prodActual.caducidad ? `Caducidad: ${prodActual.caducidad}` : '';
+    document.getElementById('prod-precio').textContent = prodActual.precio.toFixed(2);
+    document.getElementById('prod-stock').textContent = prodActual.stock;
+    
+    document.getElementById('aviso-receta').classList.toggle('oculto', prodActual.receta !== 'si');
+    document.getElementById('aviso-caducidad').classList.toggle('oculto', !estaProximoACaducar(prodActual.caducidad));
+    
+    document.getElementById('cantidad-ingresada').value = '';
+    document.getElementById('subtotal-calculado').textContent = '0.00';
+    document.getElementById('modal-cantidad').classList.add('activo');
+}
+
+function cerrarModalCantidad() {
+    document.getElementById('modal-cantidad').classList.remove('activo');
+    prodActual = null;
+}
+
+function calcularSubtotal() {
+    const c = parseInt(document.getElementById('cantidad-ingresada').value) || 0;
+    if (prodActual && c > 0) {
+        document.getElementById('subtotal-calculado').textContent = (prodActual.precio * c).toFixed(2);
+    }
+}
+
+function confirmarAgregar() {
+    const c = parseInt(document.getElementById('cantidad-ingresada').value);
+    if (!prodActual || !c || c < 1) { alert('⚠️ Cantidad inválida'); return; }
+    if (c > prodActual.stock) { alert(`⚠️ Solo hay ${prodActual.stock} disponibles`); return; }
+
+    const existe = carrito.find(i => i.id === prodActual.id);
+    if (existe) existe.cantidad += c;
+    else carrito.push({ ...prodActual, cantidad: c });
+    
+    prodActual.stock -= c;
+    localStorage.setItem('productosFarmacia', JSON.stringify(productos));
+    cerrarModalCantidad();
+    actualizarCarrito();
+    cargarProductos();
+}
+
+// === CARRITO ===
+function actualizarCarrito() {
+    const cont = document.getElementById('items-carrito');
+    const vacio = document.getElementById('carrito-vacio');
+    const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    
+    if (carrito.length === 0) {
+        cont.innerHTML = ''; vacio.style.display = 'block';
+        document.getElementById('total').textContent = '0.00';
+        return;
+    }
+    vacio.style.display = 'none';
+    cont.innerHTML = carrito.map(i => `
+        <div class="carrito-item">
+            <div><strong>${i.nombre}</strong> × ${i.cantidad} ${i.receta==='si'?'📋':''}</div>
+            <div>$${(i.precio*i.cantidad).toFixed(2)}
+                <button class="btn-quitar" onclick="quitarDelCarrito(${i.id})">×</button>
+            </div>
+        </div>`).join('');
+    document.getElementById('total').textContent = total.toFixed(2);
+}
+
+function quitarDelCarrito(id) {
+    const idx = carrito.findIndex(i => i.id === id);
+    if (idx !== -1) {
+        const item = carrito[idx];
+        const prod = productos.find(p => p.id === item.id);
+        if (prod) prod.stock += item.cantidad;
+        
+        carrito.splice(idx, 1);
+        localStorage.setItem('productosFarmacia', JSON.stringify(productos));
+        actualizarCarrito();
+        cargarProductos();
+    }
+}
+
+function limpiarCarrito() {
+    carrito.forEach(item => {
+        const prod = productos.find(p => p.id === item.id);
+        if (prod) prod.stock += item.cantidad;
+    });
+    carrito = [];
+    localStorage.setItem('productosFarmacia', JSON.stringify(productos));
+    actualizarCarrito();
+    cargarProductos();
+}
+
+// === PAGO ===
+function abrirModalPago() {
+    if (carrito.length === 0) {
+        alert('⚠️ El carrito está vacío');
+        return;
+    }
+    const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    document.getElementById('modal-total').textContent = total.toFixed(2);
+    document.getElementById('pago-recibido').value = '';
+    document.getElementById('pago-cambio').textContent = '0.00';
+    document.getElementById('modal-pago').classList.add('activo');
+}
+
+function cerrarModalPago() {
+    document.getElementById('modal-pago').classList.remove('activo');
+}
+
+function calcularCambio() {
+    const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    const recibido = parseFloat(document.getElementById('pago-recibido').value) || 0;
+    document.getElementById('pago-cambio').textContent = Math.max(0, recibido - total).toFixed(2);
+}
+
+function confirmarVenta() {
+    const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    const recibido = parseFloat(document.getElementById('pago-recibido').value) || 0;
+    
+    if (recibido < total) {
+        alert('⚠️ El monto es insuficiente');
+        return;
+    }
+
+    const venta = {
+        id: Date.now(),
+        fecha: new Date().toLocaleString('es-MX'),
+        cajero: usuarioActivo.nombre,
+        items: [...carrito],
+        total,
+        recibido,
+        cambio: recibido - total
+    };
+    
+    ventas.unshift(venta);
+    localStorage.setItem('ventasFarmacia', JSON.stringify(ventas));
+    
+    // Mostrar ticket
+    document.getElementById('ticket').style.display = 'block';
+    document.getElementById('t-num').textContent = venta.id;
+    document.getElementById('t-fecha').textContent = venta.fecha;
+    document.getElementById('t-cajero').textContent = venta.cajero;
+    document.getElementById('t-items').innerHTML = carrito.map(i => 
+        `<div class="fila-ticket">
+            <span>${i.nombre} × ${i.cantidad} ${i.receta==='si'?'📋':''}</span>
+            <span>$${(i.precio * i.cantidad).toFixed(2)}</span>
+        </div>`
+    ).join('');
+    document.getElementById('t-total').textContent = venta.total.toFixed(2);
+    document.getElementById('t-pago').textContent = venta.recibido.toFixed(2);
+    document.getElementById('t-cambio').textContent = venta.cambio.toFixed(2);
+
+    cerrarModalPago();
+    carrito = [];
+    actualizarCarrito();
+    actualizarCaja();
+}
+
+// === HISTORIAL ===
+function cargarHistorial(lista = ventas) {
+    const vacio = document.getElementById('historial-vacio');
+    const tabla = document.getElementById('tabla-historial');
+    const cuerpo = document.getElementById('cuerpo-historial');
+
+    if (lista.length === 0) {
+        vacio.style.display = 'block';
+        tabla.style.display = 'none';
+        return;
+    }
+
+    vacio.style.display = 'none';
+    tabla.style.display = 'table';
+    cuerpo.innerHTML = lista.map(v => `
+        <tr>
+            <td>${v.id}</td>
+            <td>${v.fecha}</td>
+            <td>${v.cajero}</td>
+            <td>$${v.total.toFixed(2)}</td>
+            <td>
+                <button class="btn-agregar" onclick="verDetalle(${v.id})">Ver</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filtrarHistorial() {
+    const desde = document.getElementById('fecha-desde').value;
+    const hasta = document.getElementById('fecha-hasta').value;
+    
+    if (!desde || !hasta) {
+        alert('Selecciona ambas fechas');
+        return;
+    }
+
+    const filtrados = ventas.filter(v => {
+        const fechaVenta = new Date(v.fecha.split('/').reverse().join('-').replace(' ', 'T'));
+        return new Date(desde) <= fechaVenta && fechaVenta <= new Date(hasta + 'T23:59:59');
+    });
+
+    cargarHistorial(filtrados);
+}
+
+function verTodoHistorial() {
+    document.getElementById('fecha-desde').value = '';
+    document.getElementById('fecha-hasta').value = '';
+    cargarHistorial();
+}
+
+function verDetalle(id) {
+    const venta = ventas.find(v => v.id === id);
+    if (!venta) return;
+    
+    let detalle = `=== TICKET Nº ${venta.id} ===\nFecha: ${venta.fecha}\nFarmacéutico: ${venta.cajero}\n\n--- Productos ---\n`;
+    venta.items.forEach(i => {
+        detalle += `${i.nombre} × ${i.cantidad} — $${(i.precio * i.cantidad).toFixed(2)} ${i.receta==='si'?'[RECETA]':''}\n`;
+    });
+    detalle += `\nTOTAL: $${venta.total.toFixed(2)}\nPagó: $${venta.recibido.toFixed(2)}\nCambio: $${venta.cambio.toFixed(2)}`;
+    
+    alert(detalle);
+}
+
+// === CIERRE DE CAJA ===
+function actualizarCaja() {
+    const hoy = new Date().toLocaleDateString('es-MX');
+    const ventasHoy = ventas.filter(v => v.fecha.includes(hoy));
+    const total = ventasHoy.reduce((sum, v) => sum + v.total, 0);
+
+    document.getElementById('caja-ventas').textContent = ventasHoy.length;
+    document.getElementById('caja-total').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('caja-fecha').textContent = hoy;
+}
+
+function cerrarCaja() {
+    if (!confirm('¿Seguro de cerrar la caja?')) return;
+    
+    const hoy = new Date().toLocaleDateString('es-MX');
+    const ventasHoy = ventas.filter(v => v.fecha.includes(hoy));
+    const total = ventasHoy.reduce((sum, v) => sum + v.total, 0);
+
+    let reporte = `=== CIERRE DE CAJA — FARMACIA ===\nFecha: ${hoy}\nVentas realizadas: ${ventasHoy.length}\nTOTAL EN CAJA: $${total.toFixed(2)}\n\n--- Detalle ---\n`;
+    ventasHoy.forEach(v => {
+        reporte += `Ticket ${v.id} — $${v.total.toFixed(2)}\n`;
+    });
+
+    alert(reporte);
+    console.log(reporte);
+}
+
+function exportarReporte() {
+    const hoy = new Date().toLocaleDateString('es-MX');
+    const ventasHoy = ventas.filter(v => v.fecha.includes(hoy));
+    const total = ventasHoy.reduce((sum, v) => sum + v.total, 0);
+
+    let texto = `CIERRE DE CAJA - FARMACIA\nFecha: ${hoy}\nVentas: ${ventasHoy.length}\nTotal: $${total.toFixed(2)}\n\nDetalle:\n`;
+    ventasHoy.forEach(v => {
+        texto += `${v.id}, ${v.fecha}, ${v.cajero}, $${v.total.toFixed(2)}\n`;
+    });
+
+    const blob = new Blob([texto], { type: 'text/plain' });
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(blob);
+    enlace.download = `cierre-caja-farmacia-${hoy.replaceAll('/', '-')}.txt`;
+    enlace.click();
+}
+
+// === INVENTARIO ===
+function cargarInventario(lista = productos) {
+    const cuerpo = document.getElementById('inv-cuerpo');
+    cuerpo.innerHTML = lista.map(p => {
+        const cad = estaCaducado(p.caducidad);
+        const prox = estaProximoACaducar(p.caducidad);
+        return `
+        <tr class="${cad ? 'agotado' : ''}">
+            <td><strong>${p.nombre}</strong></td>
+            <td>${p.sustancia || '-'}<br><small>Lote: ${p.lote || '-'}</small></td>
+            <td>${p.categoria}</td>
+            <td>$${p.precio.toFixed(2)}</td>
+            <td class="${p.stock <= 5 ? 'agotado' : ''}">${p.stock}</td>
+            <td class="${cad ? 'agotado' : prox ? 'proximocaducar' : ''}">${p.caducidad || '-'} ${cad ? '(CADUCADO)' : prox ? '(PRÓXIMO)' : ''}</td>
+            <td>
+                <button class="btn-quitar" onclick="eliminarProducto(${p.id})">Eliminar</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function filtrarInventario() {
+    const b = document.getElementById('buscar-inv').value.toLowerCase();
+    cargarInventario(productos.filter(p => 
+        p.nombre.toLowerCase().includes(b) || 
+        (p.sustancia && p.sustancia.toLowerCase().includes(b)) ||
+        (p.lote && p.lote.toLowerCase().includes(b))
+    ));
+}
+
+function eliminarProducto(id) {
+    if (!confirm('¿Eliminar este medicamento?')) return;
+    productos = productos.filter(p => p.id !== id);
+    localStorage.setItem('productosFarmacia', JSON.stringify(productos));
+    cargarInventario();
+    cargarProductos();
+}
+
+// === ALERTAS ===
+function cargarAlertas() {
+    const caducar = productos.filter(p => estaProximoACaducar(p.caducidad));
+    const bajoStock = productos.filter(p => p.stock <= 5 && p.stock > 0);
+    const recetaProd = productos.filter(p => p.receta === 'si');
+
+    document.getElementById('alert-caducar').innerHTML = caducar.length === 0 
+        ? '✅ Sin productos próximos a caducar' 
+        : caducar.map(p => `<p>${p.nombre} — Lote: ${p.lote || 'S/N'} — Cad: ${p.caducidad}</p>`).join('');
+
+    document.getElementById('alert-stock').innerHTML = bajoStock.length === 0 
+        ? '✅ Sin productos con stock bajo' 
+        : bajoStock.map(p => `<p>${p.nombre} — Stock: ${p.stock}</p>`).join('');
+
+    document.getElementById('alert-receta').innerHTML = recetaProd.length === 0 
+        ? 'Sin productos controlados por receta' 
+        : recetaProd.map(p => `<p>${p.nombre} — Lote: ${p.lote || 'S/N'}</p>`).join('');
+}
+
+// === INICIO ===
+window.onload = function() {
+    if (usuarioActivo) {
+        document.getElementById('pantalla-login').classList.add('oculto');
+        document.getElementById('sistema').classList.remove('oculto');
+        document.getElementById('nombre-usuario').textContent = usuarioActivo.nombre;
+        cargarProductos();
+        actualizarCaja();
+    }
+};
+</script>
+
+</body>
+</html>
